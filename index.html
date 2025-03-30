@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Figma File Viewer & JSON Downloader</title>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: #121212;
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            width: 90%;
+            max-width: 1000px;
+            background: #1e1e1e;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0px 4px 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .left {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px;
+        }
+
+        h2 {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #ff4757;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            background: #2a2a2a;
+            color: white;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            box-shadow: 0px 0px 10px #ff4757;
+        }
+
+        button {
+            background: #ff4757;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 180px;
+        }
+
+        button:hover {
+            background: #e84118;
+            transform: scale(1.05);
+        }
+
+        button .spinner {
+            display: none;
+            width: 15px;
+            height: 15px;
+            border: 3px solid white;
+            border-top: 3px solid transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        button.loading {
+            background: #d63031;
+            cursor: not-allowed;
+        }
+
+        button.loading .spinner {
+            display: inline-block;
+        }
+
+
+        .right iframe {
+            width: 100%;
+            height: 450px;
+            border-radius: 10px;
+            border: none;
+            transition: 0.5s ease-in-out;
+        }
+
+        .status {
+            font-size: 14px;
+            margin-top: 10px;
+            color: #ff9f43;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Left Side: Inputs -->
+        <div class="left">
+            <h2>Enter Figma File Key & API Key</h2>
+            <input type="text" id="figmaKeyInput" placeholder="Enter Figma File Key">
+            <input type="password" id="apiKeyInput" placeholder="Enter Figma API Key">
+            <button onclick="updateFigmaFile()">Load Figma File</button>
+
+            <h2>Download Figma File JSON</h2>
+            <button onclick="fetchFigmaData()">Download JSON</button>
+            <p class="status"></p>
+        </div>
+
+        <!-- Right Side: Figma Viewer -->
+        <div class="right">
+            <iframe id="figmaFrame" src="" allowfullscreen></iframe>
+        </div>
+    </div>
+
+    <script>
+        // Load saved inputs
+        document.getElementById("figmaKeyInput").value = localStorage.getItem("figmaFileKey") || "";
+        document.getElementById("apiKeyInput").value = localStorage.getItem("figmaApiKey") || "";
+
+        function updateFigmaFile() {
+            const fileKey = document.getElementById("figmaKeyInput").value.trim();
+            if (!fileKey) {
+                alert("Please enter a Figma File Key.");
+                return;
+            }
+
+            // Save input to local storage
+            localStorage.setItem("figmaFileKey", fileKey);
+
+            document.getElementById("figmaFrame").src = `https://www.figma.com/embed?embed_host=figma&url=https://www.figma.com/file/${fileKey}`;
+        }
+
+        async function updateFigmaFile() {
+            const fileKey = document.getElementById("figmaKeyInput").value.trim();
+            const button = document.querySelector("button[onclick='updateFigmaFile()']");
+
+            if (!fileKey) {
+                alert("Please enter a Figma File Key.");
+                return;
+            }
+
+            button.classList.add("loading");
+            button.innerHTML = `<span class="spinner"></span> Loading...`;
+
+            setTimeout(() => {
+                document.getElementById("figmaFrame").src = `https://www.figma.com/embed?embed_host=figma&url=https://www.figma.com/file/${fileKey}`;
+                button.classList.remove("loading");
+                button.innerHTML = "Load Figma File";
+            }, 1500); // Simulating API loading effect
+        }
+
+        async function fetchFigmaData() {
+            const fileKey = document.getElementById("figmaKeyInput").value.trim();
+            const apiKey = document.getElementById("apiKeyInput").value.trim();
+            const button = document.querySelector("button[onclick='fetchFigmaData()']");
+            const statusText = document.querySelector(".status");
+
+            if (!fileKey || !apiKey) {
+                alert("Please enter both Figma File Key and API Key.");
+                return;
+            }
+
+            const apiUrl = `https://api.figma.com/v1/files/${fileKey}`;
+
+            try {
+                button.classList.add("loading");
+                button.innerHTML = `<span class="spinner"></span> Downloading...`;
+                statusText.innerText = "Fetching data from Figma...";
+
+                const response = await fetch(apiUrl, {
+                    headers: { "X-Figma-Token": apiKey }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+                }
+
+                const figmaData = await response.json();
+
+                // Convert data to a downloadable JSON file
+                const blob = new Blob([JSON.stringify(figmaData, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+
+                // Create a download link
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "figma_data.json";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                statusText.innerText = "✅ Download Successful!";
+            } catch (error) {
+                statusText.innerText = "❌ Error: " + error.message;
+            } finally {
+                button.classList.remove("loading");
+                button.innerHTML = "Download JSON";
+            }
+        }
+
+    </script>
+</body>
+
+</html>
